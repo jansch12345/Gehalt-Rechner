@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AeroLogic Gehalt & DDC Rechner</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --accent: #3b82f6;
+      --accent2: #10b981;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --border: #2d3a4f;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+      line-height: 1.5;
+      -webkit-text-size-adjust: 100%;
+    }
+    .container { max-width: 520px; margin: 0 auto; }
+    h1 { font-size: 1.35rem; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
+    select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #0f1419;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 600;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      margin-bottom: 10px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .row:last-child { border-bottom: none; }
+    .row .label { color: var(--muted); font-size: 0.9rem; }
+    .row .value { font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+    .highlight { color: var(--accent2); font-size: 1.25rem !important; }
+    .ddc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .ddc-item {
+      background: #0f1419;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .ddc-item .pct {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .ddc-item .amount {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .calc-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .calc-row label { margin: 0; flex: 1; font-size: 0.9rem; color: var(--text); }
+    .stepper {
+      display: flex;
+      align-items: center;
+      background: #0f1419;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .stepper button {
+      width: 42px;
+      height: 42px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 1.4rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .stepper button:active { background: var(--border); }
+    .stepper .val {
+      min-width: 36px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1.05rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .total-box {
+      background: linear-gradient(135deg, #1e3a5f, #0f766e);
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: 14px;
+      text-align: center;
+    }
+    .total-box .title { font-size: 0.8rem; opacity: 0.85; }
+    .total-box .sum {
+      font-size: 1.7rem;
+      font-weight: 800;
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .note {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 12px;
+      line-height: 1.4;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>✈️ AeroLogic Gehalt</h1>
+    <p class="subtitle">VTV + 2,7 % · Teilzeit · DDC-Logik nach Vertrag</p>
+
+    <div class="card">
+      <label for="teilzeit">Teilzeit-Modell</label>
+      <select id="teilzeit" onchange="update()">
+        <option value="1.00" selected>Vollzeit (100 %)</option>
+        <option value="0.8667">13 E (86,67 %)</option>
+        <option value="0.80">12 E (80 %)</option>
+        <option value="0.7917">F-2,5 (79,17 %)</option>
+        <option value="0.75">F-3 (75 %)</option>
+        <option value="0.7333">11 E (73,33 %)</option>
+        <option value="0.7083">F-3,5 (70,83 %)</option>
+        <option value="0.6667">F-4 / 10 E (66,67 %)</option>
+        <option value="0.625">F-4,5 (62,5 %)</option>
+        <option value="0.60">9 E (60 %)</option>
+        <option value="0.5833">F-5 (58,33 %)</option>
+        <option value="0.5417">F-5,5 (54,17 %)</option>
+        <option value="0.5333">8 E (53,33 %)</option>
+        <option value="0.50">F-6 (50 %)</option>
+      </select>
+
+      <label for="rank">Rang / Stufe</label>
+      <select id="rank" onchange="update()">
+        <option value="4255.76">SO 1</option>
+        <option value="4438.75">SO 2</option>
+        <option value="5131.12" selected>FO 1</option>
+        <option value="5313.07">FO 2</option>
+        <option value="5861.99">FO 3</option>
+        <option value="6044.96">FO 4</option>
+        <option value="6227.95">FO 5</option>
+        <option value="6811.79">FO 6</option>
+        <option value="7008.49">FO 7</option>
+        <option value="7205.20">FO 8</option>
+        <option value="7401.90">FO 9</option>
+        <option value="7598.60">FO 10</option>
+        <option value="7795.30">FO 11</option>
+        <option value="7991.99">FO 12</option>
+        <option value="8188.69">FO 13</option>
+        <option value="8385.39">FO 14</option>
+        <option value="8778.80">FO 15</option>
+        <option value="7217.39">SFO 1</option>
+        <option value="7414.09">SFO 2</option>
+        <option value="7610.78">SFO 3</option>
+        <option value="7807.48">SFO 4</option>
+        <option value="8004.18">SFO 5</option>
+        <option value="8200.88">SFO 6</option>
+        <option value="8397.57">SFO 7</option>
+        <option value="8594.27">SFO 8</option>
+        <option value="8987.69">SFO 9</option>
+        <option value="9184.39">SFO 10</option>
+        <option value="9381.08">SFO 11</option>
+        <option value="9577.78">SFO 12</option>
+        <option value="9774.48">SFO 13</option>
+        <option value="10833.17">CP 1</option>
+        <option value="11091.10">CP 2</option>
+        <option value="11349.03">CP 3</option>
+        <option value="11606.97">CP 4</option>
+        <option value="11864.89">CP 5</option>
+        <option value="12122.82">CP 6</option>
+        <option value="12380.75">CP 7</option>
+        <option value="12638.69">CP 8</option>
+        <option value="12896.62">CP 9</option>
+        <option value="13154.55">CP 10</option>
+        <option value="13412.49">CP 11</option>
+        <option value="13670.42">CP 12</option>
+        <option value="13928.35">CP 13</option>
+        <option value="14186.29">CP 14</option>
+        <option value="14444.21">CP 15</option>
+        <option value="14702.14">CP 16</option>
+        <option value="14960.08">CP 17</option>
+        <option value="15218.01">CP 18</option>
+        <option value="15475.95">CP 19</option>
+        <option value="15733.89">CP 20</option>
+        <option value="15991.81">CP 21</option>
+        <option value="16249.74">CP 22</option>
+        <option value="16404.51">CP 23</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <span class="label">Monatsgrundgehalt</span>
+        <span class="value" id="grund">5.131,12 €</span>
+      </div>
+      <div class="row">
+        <span class="label">Schichtzulage (20 %)</span>
+        <span class="value" id="schicht">1.026,22 €</span>
+      </div>
+      <div class="row">
+        <span class="label">Summe (Grund + Schicht)</span>
+        <span class="value highlight" id="summe">6.157,34 €</span>
+      </div>
+      <div class="row">
+        <span class="label">Tagessatz <span class="badge">/ 13,25</span></span>
+        <span class="value" id="tagessatz">464,71 €</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:600; margin-bottom:8px;">DDC-Vergütung (pro Tag)</div>
+      <div class="ddc-grid">
+        <div class="ddc-item">
+          <div class="pct">110 %</div>
+          <div class="amount" id="ddc110">511,18 €</div>
+        </div>
+        <div class="ddc-item">
+          <div class="pct">150 %</div>
+          <div class="amount" id="ddc150">697,06 €</div>
+        </div>
+        <div class="ddc-item">
+          <div class="pct">200 %</div>
+          <div class="amount" id="ddc200">929,41 €</div>
+        </div>
+        <div class="ddc-item">
+          <div class="pct">Netzwerk / §14</div>
+          <div class="amount" id="ddcNetz">697,06 €</div>
+        </div>
+      </div>
+      <p class="note">
+        Vertragslogik: max. 2× 110 % (16./17. Tag) · max. 1× 150 % (18. Tag) · ab 19. Tag 200 %
+      </p>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:600; margin-bottom:12px;">Schnellrechner Zusatzvergütung</div>
+
+      <div class="calc-row">
+        <label>110 %-Tage (max 2)</label>
+        <div class="stepper">
+          <button type="button" onclick="change('n110',-1)">−</button>
+          <span class="val" id="n110">0</span>
+          <button type="button" onclick="change('n110',1)">+</button>
+        </div>
+      </div>
+
+      <div class="calc-row">
+        <label>150 %-Tage (max 1)</label>
+        <div class="stepper">
+          <button type="button" onclick="change('n150',-1)">−</button>
+          <span class="val" id="n150">0</span>
+          <button type="button" onclick="change('n150',1)">+</button>
+        </div>
+      </div>
+
+      <div class="calc-row">
+        <label>200 %-Tage</label>
+        <div class="stepper">
+          <button type="button" onclick="change('n200',-1)">−</button>
+          <span class="val" id="n200">0</span>
+          <button type="button" onclick="change('n200',1)">+</button>
+        </div>
+      </div>
+
+      <div class="calc-row">
+        <label>Network Change (NWC)</label>
+        <div class="stepper">
+          <button type="button" onclick="change('nNwc',-1)">−</button>
+          <span class="val" id="nNwc">0</span>
+          <button type="button" onclick="change('nNwc',1)">+</button>
+        </div>
+      </div>
+
+      <div class="calc-row">
+        <label>ExOff (freiwilliger Einsatz)</label>
+        <div class="stepper">
+          <button type="button" onclick="change('nExoff',-1)">−</button>
+          <span class="val" id="nExoff">0</span>
+          <button type="button" onclick="change('nExoff',1)">+</button>
+        </div>
+      </div>
+
+      <div class="total-box">
+        <div class="title">Zusatzvergütung (DDC + NWC + ExOff)</div>
+        <div class="sum" id="total">0,00 €</div>
+      </div>
+
+      <div class="total-box" style="background: linear-gradient(135deg, #1e3a5f, #1e40af); margin-top: 12px;">
+        <div class="title">Monatsgehalt gesamt (Grund + Schicht + Zuschläge)</div>
+        <div class="sum" id="grandTotal">6.157,34 €</div>
+      </div>
+
+      <p class="note">
+        NWC &amp; ExOff = je 150 % Tagessatz (Vollzeit-Basis) · Monatsgehalt anteilig
+      </p>
+    </div>
+
+    <p class="note" style="text-align:center; margin-top:8px;">
+      Stand: VTV + 2,7 % + TV Teilzeit 01.05.2025 · Nur zur Orientierung
+    </p>
+  </div>
+
+  <script>
+    var counts = { n110: 0, n150: 0, n200: 0, nNwc: 0, nExoff: 0 };
+    var current = { summe: 6157.34, d110: 511.18, d150: 697.06, d200: 929.41 };
+    var max110 = 2;
+    var max150 = 1;
+
+    function fmt(n) {
+      var s = (Math.round(n * 100) / 100).toFixed(2);
+      return s.replace('.', ',') + ' €';
+    }
+
+    function change(key, delta) {
+      var next = counts[key] + delta;
+      if (next < 0) return;
+      if (key === 'n110' && next > max110) return;
+      if (key === 'n150' && next > max150) return;
+      counts[key] = next;
+      document.getElementById(key).textContent = counts[key];
+      calcTotal();
+    }
+
+    function update() {
+      var grundVoll = parseFloat(document.getElementById('rank').value);
+      var anteil = parseFloat(document.getElementById('teilzeit').value);
+      if (isNaN(grundVoll) || isNaN(anteil)) return;
+
+      // Monatliche Vergütung anteilig (Teilzeit)
+      var grund = grundVoll * anteil;
+      var schicht = grund * 0.20;
+      var summe = grund + schicht;
+
+      // Tagessatz & DDC immer auf Vollzeit-Basis (laut VTV)
+      var schichtVoll = grundVoll * 0.20;
+      var summeVoll = grundVoll + schichtVoll;
+      var tagessatz = summeVoll / 13.25;
+
+      current.summe = summe;
+      current.d110 = tagessatz * 1.10;
+      current.d150 = tagessatz * 1.50;
+      current.d200 = tagessatz * 2.00;
+
+      document.getElementById('grund').textContent = fmt(grund);
+      document.getElementById('schicht').textContent = fmt(schicht);
+      document.getElementById('summe').textContent = fmt(summe);
+      document.getElementById('tagessatz').textContent = fmt(tagessatz);
+      document.getElementById('ddc110').textContent = fmt(current.d110);
+      document.getElementById('ddc150').textContent = fmt(current.d150);
+      document.getElementById('ddc200').textContent = fmt(current.d200);
+      document.getElementById('ddcNetz').textContent = fmt(current.d150);
+
+      calcTotal();
+    }
+
+    function calcTotal() {
+      var total = counts.n110 * current.d110 +
+                  counts.n150 * current.d150 +
+                  counts.n200 * current.d200 +
+                  counts.nNwc * current.d150 +
+                  counts.nExoff * current.d150;
+      document.getElementById('total').textContent = fmt(total);
+      document.getElementById('grandTotal').textContent = fmt(current.summe + total);
+    }
+
+    // Event Listener
+    document.getElementById('rank').addEventListener('change', update);
+    document.getElementById('rank').addEventListener('input', update);
+    document.getElementById('teilzeit').addEventListener('change', update);
+    document.getElementById('teilzeit').addEventListener('input', update);
+
+    update();
+  </script>
+</body>
+</html>
